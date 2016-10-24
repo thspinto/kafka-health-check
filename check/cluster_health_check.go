@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/optiopay/kafka/proto"
 )
@@ -85,7 +86,7 @@ func checkPartition(partition *proto.MetadataRespPartition, zkTopic *ZkTopic, to
 
 	replicas := partition.Replicas
 
-	replicas, ok := zkTopic.Partitions[partition.ID]
+	replicas, ok := zkTopic.Partitions[strconv.Itoa(int(partition.ID))]
 	if !ok {
 		status.Status = red
 		status.ZooKeeper = "Missing ZooKeeper metadata"

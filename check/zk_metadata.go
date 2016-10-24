@@ -10,7 +10,7 @@ import (
 
 type ZkTopic struct {
 	Name       string
-	Partitions map[int32][]int32 `json:"partitions"`
+	Partitions map[string][]int32 `json:"partitions"`
 }
 
 func (check *HealthCheck) getZooKeeperMetadata() (topics []ZkTopic, brokers []int32, err error) {
