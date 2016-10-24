@@ -179,8 +179,8 @@ func healthyZkTopics() []ZkTopic {
 	return []ZkTopic{
 		{
 			Name: "some-topic",
-			Partitions: map[int32][]int32{
-				2: {2, 1},
+			Partitions: map[string][]int32{
+				"2": {2, 1},
 			},
 		},
 	}
@@ -190,8 +190,8 @@ func replicaMissingZkTopics() []ZkTopic {
 	return []ZkTopic{
 		{
 			Name: "some-topic",
-			Partitions: map[int32][]int32{
-				2: {1},
+			Partitions: map[string][]int32{
+				"2": {1},
 			},
 		},
 	}
@@ -201,7 +201,7 @@ func partitionMissingZkTopics() []ZkTopic {
 	return []ZkTopic{
 		{
 			Name:       "some-topic",
-			Partitions: map[int32][]int32{},
+			Partitions: map[string][]int32{},
 		},
 	}
 }

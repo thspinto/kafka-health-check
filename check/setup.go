@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -199,7 +200,7 @@ func maybeExpandReplicationTopic(zk ZkConnection, brokerID, partitionID int32, t
 		return errors.Wrap(err, "Unable to determine if replication topic should be expanded")
 	}
 
-	replicas, ok := topic.Partitions[partitionID]
+	replicas, ok := topic.Partitions[strconv.Itoa(int(partitionID))]
 	if !ok {
 		return fmt.Errorf(`Cannot find partition with ID %d in topic "%s"`, partitionID, topicName)
 	}
@@ -292,7 +293,7 @@ func (check *HealthCheck) deleteTopic(zkConn ZkConnection, chroot, name string, 
 		return err
 	}
 
-	replicas, ok := topic.Partitions[partitionID]
+	replicas, ok := topic.Partitions[strconv.Itoa(int(partitionID))]
 	if !ok {
 		return fmt.Errorf(`Cannot find partition with ID %d in topic "%s"`, partitionID, name)
 	}
