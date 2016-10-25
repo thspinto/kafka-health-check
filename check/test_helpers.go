@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"time"
 
+	kafka "github.com/Shopify/sarama"
+	kafkamocks "github.com/Shopify/sarama/mocks"
 	"github.com/golang/mock/gomock"
-	"github.com/optiopay/kafka"
-	"github.com/optiopay/kafka/kafkatest"
 	"github.com/optiopay/kafka/proto"
 )
 
@@ -33,24 +33,20 @@ func newTestCheck() *HealthCheck {
 	}
 }
 
-func mockBroker(check *HealthCheck, ctrl *gomock.Controller) (*MockBrokerConnection, *kafkatest.Broker, *kafkatest.Consumer, kafka.Producer) {
-	broker := kafkatest.NewBroker()
-	consumer := &kafkatest.Consumer{
-		Broker:   broker,
-		Messages: make(chan *proto.Message),
-		Errors:   make(chan error),
-	}
-	producer := broker.Producer(kafka.NewProducerConf())
+func mockBroker(check *HealthCheck, ctrl *gomock.Controller) (*MockBrokerConnection, *kafka.MockBroker, *kafkamocks.Consumer, *kafkamocks.SyncProducer) {
+	broker := kafka.NewMockBroker(nil, 0)
+	consumer := kafkamocks.NewConsumer(nil, nil)
+	producer := kafkamocks.NewSyncProducer(nil, nil)
 	connection := NewMockBrokerConnection(ctrl)
-	check.broker = connection
+	//check.broker = connection
 	check.consumer = consumer
 	check.producer = producer
 
 	return connection, broker, consumer, producer
 }
 
-func workingBroker(check *HealthCheck, ctrl *gomock.Controller, stop <-chan struct{}) *MockBrokerConnection {
-	connection, broker, consumer, _ := mockBroker(check, ctrl)
+func workingBroker(check *HealthCheck, ctrl *gomock.Controller, stop <-chan struct{}) *kafka.MockBroker {
+	_, broker, _, _ := mockBroker(check, ctrl)
 
 	go func() {
 		for {
@@ -58,22 +54,22 @@ func workingBroker(check *HealthCheck, ctrl *gomock.Controller, stop <-chan stru
 			case <-stop:
 				return
 			default:
-				messages, err := broker.ReadProducers(1 * time.Millisecond)
-				if err != nil {
-					continue
-				}
-				for _, message := range messages.Messages {
-					consumer.Messages <- message
-				}
+				// messages, err := broker.ReadProducers(1 * time.Millisecond)
+				// if err != nil {
+				// 	continue
+				// }
+				// for _, message := range messages.Messages {
+				// 	consumer.Messages <- message
+				// }
 			}
 		}
 	}()
 
-	return connection
+	return broker
 }
 
 func brokenBroker(check *HealthCheck, ctrl *gomock.Controller) chan struct{} {
-	_, broker, consumer, _ := mockBroker(check, ctrl)
+	//_, broker, consumer, _ := mockBroker(check, ctrl)
 
 	stop := make(chan struct{})
 	ticker := time.NewTicker(5 * time.Millisecond)
@@ -83,7 +79,7 @@ func brokenBroker(check *HealthCheck, ctrl *gomock.Controller) chan struct{} {
 			case <-stop:
 				return
 			default:
-				_, _ = broker.ReadProducers(1 * time.Millisecond)
+				//				_, _ = broker.ReadProducers(1 * time.Millisecond)
 			}
 		}
 	}()
@@ -91,7 +87,7 @@ func brokenBroker(check *HealthCheck, ctrl *gomock.Controller) chan struct{} {
 	go func() {
 		select {
 		case <-ticker.C:
-			consumer.Errors <- kafka.ErrNoData
+			//consumer.Errors <- kafka.ErrNoData
 		case <-stop:
 			ticker.Stop()
 			return

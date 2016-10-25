@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	kafka "github.com/Shopify/sarama"
 	log "github.com/Sirupsen/logrus"
-	"github.com/optiopay/kafka/proto"
 	"github.com/pkg/errors"
 	"github.com/samuel/go-zookeeper/zk"
 )
@@ -32,7 +32,7 @@ func (check *HealthCheck) connect(firstConnection bool, stop <-chan struct{}) er
 func (check *HealthCheck) tryConnectOnce(createBrokerTopic, createReplicationTopic *bool) error {
 	pauseTime := check.config.retryInterval
 	// connect to kafka cluster
-	connectString := []string{fmt.Sprintf("localhost:%d", check.config.brokerPort)}
+	connectString := fmt.Sprintf("localhost:%d", check.config.brokerPort)
 	err := check.broker.Dial(connectString, check.brokerConfig())
 	if err != nil {
 		log.Printf("unable to connect to broker, retrying in %s (%s)", pauseTime.String(), err)
@@ -65,14 +65,19 @@ func (check *HealthCheck) tryConnectOnce(createBrokerTopic, createReplicationTop
 		return err
 	}
 
-	producer := check.broker.Producer(check.producerConfig())
+	producer, err := check.broker.Producer(check.producerConfig())
+	if err != nil {
+		log.Printf("unable to create producer, retrying in %s: %s", pauseTime.String(), err)
+		check.broker.Close()
+		return err
+	}
 
 	check.consumer = consumer
 	check.producer = producer
 	return nil
 }
 
-func (check *HealthCheck) findPartitionID(topicName string, forHealthCheck bool, createIfMissing *bool, metadata *proto.MetadataResp) (int32, error) {
+func (check *HealthCheck) findPartitionID(topicName string, forHealthCheck bool, createIfMissing *bool, metadata *kafka.MetadataResponse) (int32, error) {
 	brokerID := int32(check.config.brokerID)
 
 	if !brokerExists(brokerID, metadata) {
@@ -112,19 +117,19 @@ func (check *HealthCheck) findPartitionID(topicName string, forHealthCheck bool,
 	}
 }
 
-func findTopic(name string, metadata *proto.MetadataResp) (*proto.MetadataRespTopic, bool) {
+func findTopic(name string, metadata *kafka.MetadataResponse) (*kafka.TopicMetadata, bool) {
 	for _, topic := range metadata.Topics {
 		if topic.Name == name {
-			return &topic, true
+			return topic, true
 		}
 	}
 
 	return nil, false
 }
 
-func brokerExists(brokerID int32, metadata *proto.MetadataResp) bool {
+func brokerExists(brokerID int32, metadata *kafka.MetadataResponse) bool {
 	for _, broker := range metadata.Brokers {
-		if broker.NodeID == brokerID {
+		if broker.ID() == brokerID {
 			return true
 		}
 	}

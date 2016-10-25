@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/optiopay/kafka/proto"
+	kafka "github.com/Shopify/sarama"
 )
 
 // periodically checks health of the Kafka cluster
-func (check *HealthCheck) checkClusterHealth(metadata *proto.MetadataResp, zkTopics []ZkTopic, zkBrokers []int32) ClusterStatus {
+func (check *HealthCheck) checkClusterHealth(metadata *kafka.MetadataResponse, zkTopics []ZkTopic, zkBrokers []int32) ClusterStatus {
 	clusterStatus := ClusterStatus{Status: green}
 	check.checkBrokerMetadata(metadata, zkBrokers, &clusterStatus)
 	check.checkTopics(metadata, zkTopics, &clusterStatus)
@@ -16,10 +16,10 @@ func (check *HealthCheck) checkClusterHealth(metadata *proto.MetadataResp, zkTop
 	return clusterStatus
 }
 
-func (check *HealthCheck) checkBrokerMetadata(metadata *proto.MetadataResp, zkBrokers []int32, cluster *ClusterStatus) {
+func (check *HealthCheck) checkBrokerMetadata(metadata *kafka.MetadataResponse, zkBrokers []int32, cluster *ClusterStatus) {
 	var brokersFromMeta []int32
 	for _, broker := range metadata.Brokers {
-		brokersFromMeta = append(brokersFromMeta, broker.NodeID)
+		brokersFromMeta = append(brokersFromMeta, broker.ID())
 	}
 
 	for _, broker := range brokersFromMeta {
@@ -39,16 +39,16 @@ func (check *HealthCheck) checkBrokerMetadata(metadata *proto.MetadataResp, zkBr
 	return
 }
 
-func (check *HealthCheck) checkTopics(metadata *proto.MetadataResp, zkTopics []ZkTopic, cluster *ClusterStatus) {
+func (check *HealthCheck) checkTopics(metadata *kafka.MetadataResponse, zkTopics []ZkTopic, cluster *ClusterStatus) {
 
 	zkTopicMap := make(map[string]ZkTopic)
 	for _, topic := range zkTopics {
 		zkTopicMap[topic.Name] = topic
 	}
 
-	metaTopicMap := make(map[string]proto.MetadataRespTopic)
+	metaTopicMap := make(map[string]kafka.TopicMetadata)
 	for _, topic := range metadata.Topics {
-		metaTopicMap[topic.Name] = topic
+		metaTopicMap[topic.Name] = *topic
 	}
 
 	for _, topic := range zkTopics {
@@ -69,7 +69,7 @@ func (check *HealthCheck) checkTopics(metadata *proto.MetadataResp, zkTopics []Z
 		}
 
 		for _, partition := range topic.Partitions {
-			checkPartition(&partition, &zkTopic, &status)
+			checkPartition(partition, &zkTopic, &status)
 		}
 
 		if status.Status != green {
@@ -81,7 +81,7 @@ func (check *HealthCheck) checkTopics(metadata *proto.MetadataResp, zkTopics []Z
 	return
 }
 
-func checkPartition(partition *proto.MetadataRespPartition, zkTopic *ZkTopic, topicStatus *TopicStatus) {
+func checkPartition(partition *kafka.PartitionMetadata, zkTopic *ZkTopic, topicStatus *TopicStatus) {
 	status := PartitionStatus{Status: green}
 
 	replicas := partition.Replicas
@@ -99,15 +99,15 @@ func checkPartition(partition *proto.MetadataRespPartition, zkTopic *ZkTopic, to
 		}
 	}
 
-	if len(partition.Isrs) < len(replicas) {
+	if len(partition.Isr) < len(replicas) {
 		for _, replica := range replicas {
-			if !contains(partition.Isrs, replica) {
+			if !contains(partition.Isr, replica) {
 				status.OutOfSyncReplicas = append(status.OutOfSyncReplicas, replica)
 			}
 		}
 		status.Status = yellow // partition is under-replicated.
 	}
-	if len(partition.Isrs) == 0 {
+	if len(partition.Isr) == 0 {
 		status.Status = red // partition is offline.
 	}
 	if status.Status != green {

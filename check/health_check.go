@@ -4,16 +4,16 @@ import (
 	"math/rand"
 	"time"
 
+	kafka "github.com/Shopify/sarama"
 	log "github.com/Sirupsen/logrus"
-	"github.com/optiopay/kafka"
 )
 
 // HealthCheck holds all data required for health checking.
 type HealthCheck struct {
 	zookeeper              ZkConnection
-	broker                 BrokerConnection
+	broker                 kafkaBrokerConnection
 	consumer               kafka.Consumer
-	producer               kafka.Producer
+	producer               kafka.SyncProducer
 	config                 HealthCheckConfig
 	partitionID            int32
 	replicationPartitionID int32
@@ -45,7 +45,7 @@ type Update struct {
 // New creates a new health check with the given config.
 func New(config HealthCheckConfig) *HealthCheck {
 	return &HealthCheck{
-		broker:    &kafkaBrokerConnection{},
+		broker:    kafkaBrokerConnection{},
 		zookeeper: &zkConnection{},
 		randSrc:   rand.NewSource(time.Now().UnixNano()),
 		config:    config,
@@ -117,25 +117,25 @@ func newUpdate(report StatusReport, name string) Update {
 	return Update{report.Summary(), data}
 }
 
-func (check *HealthCheck) brokerConfig() kafka.BrokerConf {
-	config := kafka.NewBrokerConf("health-check-client")
-	config.DialRetryLimit = 1
-	config.DialRetryWait = check.config.CheckTimeout
+func (check *HealthCheck) brokerConfig() *kafka.Config {
+	config := kafka.NewConfig()
+	config.Producer.Retry.Max = 1
+	config.Producer.Retry.Backoff = check.config.CheckTimeout
 	return config
 }
 
-func (check *HealthCheck) consumerConfig() kafka.ConsumerConf {
-	config := kafka.NewConsumerConf(check.config.topicName, 0)
-	config.StartOffset = kafka.StartOffsetNewest
-	config.RequestTimeout = check.config.CheckTimeout
-	config.RetryLimit = 1
-	config.RetryWait = check.config.CheckTimeout
+func (check *HealthCheck) consumerConfig() *kafka.Config {
+	config := kafka.NewConfig()
+	config.Consumer.Offsets.Initial = kafka.OffsetNewest
+	config.Consumer.MaxWaitTime = check.config.CheckTimeout
+	config.Consumer.Retry.Backoff = check.config.CheckTimeout
+	//config.Consumer.Return.Errors = true
 	return config
 }
 
-func (check *HealthCheck) producerConfig() kafka.ProducerConf {
-	config := kafka.NewProducerConf()
-	config.RequestTimeout = check.config.CheckTimeout
-	config.RetryLimit = 1
+func (check *HealthCheck) producerConfig() *kafka.Config {
+	config := kafka.NewConfig()
+	config.Producer.Retry.Max = 1
+	config.Producer.Retry.Backoff = check.config.CheckTimeout
 	return config
 }

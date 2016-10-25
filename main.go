@@ -31,6 +31,7 @@ func addShutdownHook() (chan struct{}, *sync.WaitGroup) {
 	signal.Notify(shutdown, syscall.SIGTERM)
 	go func() {
 		for range shutdown {
+			os.Exit(0) // TODO not a propert shutdown
 			close(stop)
 			awaitCheck.Wait()
 		}

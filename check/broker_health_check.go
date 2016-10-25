@@ -4,26 +4,31 @@ import (
 	"math/rand"
 	"time"
 
+	kafka "github.com/Shopify/sarama"
 	log "github.com/Sirupsen/logrus"
-	"github.com/optiopay/kafka"
-	"github.com/optiopay/kafka/proto"
 )
 
 // sends one message to the broker partition, wait for it to appear on the consumer.
-func (check *HealthCheck) checkBrokerHealth(metadata *proto.MetadataResp) BrokerStatus {
+func (check *HealthCheck) checkBrokerHealth(metadata *kafka.MetadataResponse) BrokerStatus {
 	status := unhealthy
 	payload := randomBytes(check.config.MessageLength, check.randSrc)
-	message := &proto.Message{Value: []byte(payload)}
+	message := &kafka.Message{Value: []byte(payload)}
 
-	if _, err := check.producer.Produce(check.config.topicName, check.partitionID, message); err != nil {
+	request := &kafka.ProduceRequest{}
+	request.AddMessage(check.config.topicName, check.partitionID, message)
+	if _, err := check.broker.broker.Produce(request); err != nil {
 		log.Println("producer failure - broker unhealthy:", err)
 	} else {
-		status = check.waitForMessage(message)
+		log.Debug("Waiting for message from broker")
+		status = check.waitForMessage(check.config.topicName, check.partitionID, message)
+		log.Debug("Got message from broker")
 	}
 
 	brokerStatus := BrokerStatus{Status: status}
 	if status == healthy {
-		check.producer.Produce(check.config.replicationTopicName, check.replicationPartitionID, message)
+		request := &kafka.ProduceRequest{}
+		request.AddMessage(check.config.replicationTopicName, check.replicationPartitionID, message)
+		check.broker.broker.Produce(request)
 		check.brokerInSync(&brokerStatus, metadata)
 		check.brokerReplicates(&brokerStatus, metadata)
 	}
@@ -32,12 +37,19 @@ func (check *HealthCheck) checkBrokerHealth(metadata *proto.MetadataResp) Broker
 }
 
 // waits for a message with the payload of the given message to appear on the consumer side.
-func (check *HealthCheck) waitForMessage(message *proto.Message) string {
+func (check *HealthCheck) waitForMessage(topic string, partition int32, message *kafka.Message) string {
 	deadline := time.Now().Add(check.config.CheckTimeout)
+	partitionConsumer, err := check.consumer.ConsumePartition(topic, partition, kafka.OffsetOldest)
+	if err == nil {
+		defer func() {
+			if err := partitionConsumer.Close(); err != nil {
+				log.Fatalln(err)
+			}
+		}()
+	}
 	for time.Now().Before(deadline) {
-		receivedMessage, err := check.consumer.Consume()
 		if err != nil {
-			if err != kafka.ErrNoData {
+			if err != kafka.ErrRequestTimedOut {
 				log.Println("consumer failure - broker unhealthy:", err)
 				return unhealthy
 			}
@@ -46,6 +58,7 @@ func (check *HealthCheck) waitForMessage(message *proto.Message) string {
 			}
 			continue
 		}
+		receivedMessage := <-partitionConsumer.Messages()
 		if string(receivedMessage.Value) == string(message.Value) {
 			return healthy
 		}
@@ -54,13 +67,13 @@ func (check *HealthCheck) waitForMessage(message *proto.Message) string {
 }
 
 // checks whether the broker is in all ISRs of all partitions it replicates.
-func (check *HealthCheck) brokerInSync(brokerStatus *BrokerStatus, metadata *proto.MetadataResp) {
+func (check *HealthCheck) brokerInSync(brokerStatus *BrokerStatus, metadata *kafka.MetadataResponse) {
 	brokerID := int32(check.config.brokerID)
 
 	inSync := true
 	for _, topic := range metadata.Topics {
 		for _, partition := range topic.Partitions {
-			if contains(partition.Replicas, brokerID) && !contains(partition.Isrs, brokerID) {
+			if contains(partition.Replicas, brokerID) && !contains(partition.Isr, brokerID) {
 				inSync = false
 				status := ReplicationStatus{Topic: topic.Name, Partition: partition.ID}
 				brokerStatus.OutOfSync = append(brokerStatus.OutOfSync, status)
@@ -73,9 +86,9 @@ func (check *HealthCheck) brokerInSync(brokerStatus *BrokerStatus, metadata *pro
 	}
 }
 
-var replicationFailureCount uint = 0
+var replicationFailureCount uint
 
-func (check *HealthCheck) brokerReplicates(brokerStatus *BrokerStatus, metadata *proto.MetadataResp) {
+func (check *HealthCheck) brokerReplicates(brokerStatus *BrokerStatus, metadata *kafka.MetadataResponse) {
 	brokerID := int32(check.config.brokerID)
 
 	topic, ok := findTopic(check.config.replicationTopicName, metadata)
@@ -88,8 +101,8 @@ func (check *HealthCheck) brokerReplicates(brokerStatus *BrokerStatus, metadata 
 			continue
 		}
 
-		if !contains(p.Isrs, brokerID) {
-			replicationFailureCount += 1
+		if !contains(p.Isr, brokerID) {
+			replicationFailureCount++
 			if replicationFailureCount > check.config.replicationFailureThreshold {
 				brokerStatus.Status = unhealthy
 			}

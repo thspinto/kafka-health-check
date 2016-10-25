@@ -3,48 +3,50 @@ package check
 import (
 	"time"
 
-	"github.com/optiopay/kafka"
-	"github.com/optiopay/kafka/proto"
+	kafka "github.com/Shopify/sarama"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
 // BrokerConnection represents a connection to the Kafka broker
 type BrokerConnection interface {
-	Dial(nodeAddresses []string, conf kafka.BrokerConf) error
+	Dial(nodeAddresses []string, conf kafka.Config) error
 
-	Consumer(conf kafka.ConsumerConf) (kafka.Consumer, error)
+	Consumer(conf kafka.Config) (kafka.Consumer, error)
 
-	Producer(conf kafka.ProducerConf) kafka.Producer
+	Producer(conf kafka.Config) kafka.SyncProducer
 
-	Metadata() (*proto.MetadataResp, error)
+	Metadata() (*kafka.MetadataResponse, error)
 
 	Close()
 }
 
 // actual implementation of the Kafka broker connection based on optiopay/kafka.
 type kafkaBrokerConnection struct {
-	broker *kafka.Broker
+	broker        *kafka.Broker
+	brokerAddress string
 }
 
-func (connection *kafkaBrokerConnection) Dial(nodeAddresses []string, conf kafka.BrokerConf) error {
-	broker, err := kafka.Dial(nodeAddresses, conf)
+func (connection *kafkaBrokerConnection) Dial(brokerAddress string, conf *kafka.Config) error {
+	broker := kafka.NewBroker(brokerAddress)
+	err := broker.Open(conf)
 	if err != nil {
 		return err
 	}
 	connection.broker = broker
+	connection.brokerAddress = brokerAddress
 	return nil
 }
 
-func (connection *kafkaBrokerConnection) Consumer(conf kafka.ConsumerConf) (kafka.Consumer, error) {
-	return connection.broker.Consumer(conf)
+func (connection *kafkaBrokerConnection) Consumer(conf *kafka.Config) (kafka.Consumer, error) {
+	return kafka.NewConsumer([]string{connection.brokerAddress}, conf)
 }
 
-func (connection *kafkaBrokerConnection) Producer(conf kafka.ProducerConf) kafka.Producer {
-	return connection.broker.Producer(conf)
+func (connection *kafkaBrokerConnection) Producer(conf *kafka.Config) (kafka.SyncProducer, error) {
+	return kafka.NewSyncProducer([]string{connection.brokerAddress}, conf)
 }
 
-func (connection *kafkaBrokerConnection) Metadata() (*proto.MetadataResp, error) {
-	return connection.broker.Metadata()
+func (connection *kafkaBrokerConnection) Metadata() (*kafka.MetadataResponse, error) {
+	return connection.broker.GetMetadata(&kafka.MetadataRequest{})
 }
 
 func (connection *kafkaBrokerConnection) Close() {
