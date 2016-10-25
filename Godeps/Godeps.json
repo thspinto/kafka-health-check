@@ -1,0 +1,79 @@
+{
+	"ImportPath": "github.com/bonifaido/kafka-health-check",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Shopify/sarama",
+			"Comment": "v1.10.1-17-g1548006",
+			"Rev": "1548006a8b86e4431c98a96ff029d8c2cfdf7fd3"
+		},
+		{
+			"ImportPath": "github.com/Shopify/sarama/mocks",
+			"Comment": "v1.10.1-17-g1548006",
+			"Rev": "1548006a8b86e4431c98a96ff029d8c2cfdf7fd3"
+		},
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.10.0-38-g3ec0642",
+			"Rev": "3ec0642a7fb6488f65b06f9040adc67e3990296a"
+		},
+		{
+			"ImportPath": "github.com/davecgh/go-spew/spew",
+			"Comment": "v1.0.0-3-g6d21280",
+			"Rev": "6d212800a42e8ab5c146b8ace3490ee17e5225f9"
+		},
+		{
+			"ImportPath": "github.com/eapache/go-resiliency/breaker",
+			"Comment": "v1.0.0-4-gb86b1ec",
+			"Rev": "b86b1ec0dd4209a588dc1285cdd471e73525c0b3"
+		},
+		{
+			"ImportPath": "github.com/eapache/go-xerial-snappy",
+			"Rev": "bb955e01b9346ac19dc29eb16586c90ded99a98c"
+		},
+		{
+			"ImportPath": "github.com/eapache/queue",
+			"Comment": "v1.0.2-7-g44cc805",
+			"Rev": "44cc805cf13205b55f69e14bcb69867d1ae92f98"
+		},
+		{
+			"ImportPath": "github.com/golang/mock/gomock",
+			"Rev": "bd3c8e81be01eef76d4b503f5e687d2d1354d2d9"
+		},
+		{
+			"ImportPath": "github.com/golang/snappy",
+			"Rev": "d9eb7a3d35ec988b8585d4a0068e462c27d28380"
+		},
+		{
+			"ImportPath": "github.com/klauspost/crc32",
+			"Comment": "v1.0-2-gcb6bfca",
+			"Rev": "cb6bfca970f6908083f26f39a79009d608efd5cd"
+		},
+		{
+			"ImportPath": "github.com/optiopay/kafka",
+			"Rev": "a83cf313729550d83de31d03171e67cfb909ac18"
+		},
+		{
+			"ImportPath": "github.com/optiopay/kafka/proto",
+			"Rev": "a83cf313729550d83de31d03171e67cfb909ac18"
+		},
+		{
+			"ImportPath": "github.com/pkg/errors",
+			"Comment": "v0.8.0-1-g839d9e9",
+			"Rev": "839d9e913e063e28dfd0e6c7b7512793e0a48be9"
+		},
+		{
+			"ImportPath": "github.com/rcrowley/go-metrics",
+			"Rev": "ab2277b1c5d15c3cba104e9cbddbdfc622df5ad8"
+		},
+		{
+			"ImportPath": "github.com/samuel/go-zookeeper/zk",
+			"Rev": "87e1bca4477a3cc767ca71be023ced183d74e538"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "c200b10b5d5e122be351b67af224adc6128af5bf"
+		}
+	]
+}
