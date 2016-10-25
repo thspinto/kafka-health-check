@@ -121,6 +121,7 @@ func (check *HealthCheck) brokerConfig() *kafka.Config {
 	config := kafka.NewConfig()
 	config.Producer.Retry.Max = 1
 	config.Producer.Retry.Backoff = check.config.CheckTimeout
+	config.Metadata.Retry.Backoff = check.config.CheckTimeout
 	return config
 }
 
