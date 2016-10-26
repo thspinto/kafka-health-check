@@ -65,6 +65,7 @@ func (check *HealthCheck) CheckHealth(brokerUpdates chan<- Update, clusterUpdate
 		log.Println("metadata could not be retrieved, assuming broker unhealthy:", err)
 		brokerUpdates <- Update{unhealthy, simpleStatus(unhealthy)}
 		clusterUpdates <- Update{red, simpleStatus(red)}
+		reconnect(check, stop)
 	}
 
 	check.randSrc = rand.NewSource(time.Now().UnixNano())
@@ -92,12 +93,7 @@ func (check *HealthCheck) CheckHealth(brokerUpdates chan<- Update, clusterUpdate
 
 			if brokerStatus.Status == unhealthy {
 				clusterUpdates <- Update{red, simpleStatus(red)}
-				log.Info("closing connection and reconnecting")
-				if err := check.reconnect(stop); err != nil {
-					log.Info("error while reconnecting:", err)
-					return
-				}
-				log.Info("reconnected")
+				reconnect(check, stop)
 			} else {
 				clusterStatus := check.checkClusterHealth(metadata, zkTopics, zkBrokers)
 				clusterUpdates <- newUpdate(clusterStatus, "cluster")
@@ -106,6 +102,15 @@ func (check *HealthCheck) CheckHealth(brokerUpdates chan<- Update, clusterUpdate
 			return
 		}
 	}
+}
+
+func reconnect(check *HealthCheck, stop <-chan struct{}) {
+	log.Info("closing connection and reconnecting")
+	if err := check.reconnect(stop); err != nil {
+		log.Info("error while reconnecting:", err)
+		return
+	}
+	log.Info("reconnected")
 }
 
 func newUpdate(report StatusReport, name string) Update {
