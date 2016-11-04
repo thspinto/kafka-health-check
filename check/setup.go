@@ -112,9 +112,8 @@ func (check *HealthCheck) findPartitionID(topicName string, forHealthCheck bool,
 
 	if ok {
 		return 0, fmt.Errorf(`Unable to find broker's parition in topic "%s" in metadata`, topicName)
-	} else {
-		return 0, fmt.Errorf(`Unable to find broker's topic "%s" in metadata`, topicName)
 	}
+	return 0, fmt.Errorf(`Unable to find broker's topic "%s" in metadata`, topicName)
 }
 
 func findTopic(name string, metadata *kafka.MetadataResponse) (*kafka.TopicMetadata, bool) {
@@ -224,11 +223,11 @@ func reassignPartition(zk ZkConnection, partitionID int32, replicas []int32, top
 	repeat := true
 	for repeat {
 		time.Sleep(1 * time.Second)
-		exists, _, rp_err := zk.Exists(chroot + "/admin/reassign_partitions")
-		if rp_err != nil {
-			log.Warn("Error while checking if reassign_partitions node exists", err)
+		exists, _, rpErr := zk.Exists(chroot + "/admin/reassign_partitions")
+		if rpErr != nil {
+			log.Warn("Error while checking if reassign_partitions node exists", rpErr)
 		}
-		repeat = exists || err != nil
+		repeat = exists || rpErr != nil
 	}
 
 	var replicasStr []string
