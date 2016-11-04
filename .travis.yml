@@ -10,9 +10,6 @@ go:
 
 sudo: false
 
-install:
- - make deps
-
-script:
-  - make test-no-race
-  - make compatibility
+# script:
+#   - make test-no-race
+#   - make compatibility
