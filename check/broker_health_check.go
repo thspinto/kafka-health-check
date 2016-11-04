@@ -17,7 +17,7 @@ func (check *HealthCheck) checkBrokerHealth(metadata *kafka.MetadataResponse) Br
 	request := &kafka.ProduceRequest{}
 	request.AddMessage(check.config.topicName, check.partitionID, message)
 	if _, err := check.broker.broker.Produce(request); err != nil {
-		log.Println("producer failure - broker unhealthy:", err)
+		log.Info("producer failure - broker unhealthy:", check.config.topicName, err)
 	} else {
 		log.Debug("Waiting for message from broker")
 		status = check.waitForMessage(check.config.topicName, check.partitionID, message)
@@ -26,9 +26,10 @@ func (check *HealthCheck) checkBrokerHealth(metadata *kafka.MetadataResponse) Br
 
 	brokerStatus := BrokerStatus{Status: status}
 	if status == healthy {
-		request := &kafka.ProduceRequest{}
-		request.AddMessage(check.config.replicationTopicName, check.replicationPartitionID, message)
-		check.broker.broker.Produce(request)
+		_, _, err := check.producer.SendMessage(&kafka.ProducerMessage{Topic: check.config.replicationTopicName, Value: kafka.ByteEncoder(payload)})
+		if err != nil {
+			log.Error("producer failure - failed to send message to replicationTopic: ", err)
+		}
 		check.brokerInSync(&brokerStatus, metadata)
 		check.brokerReplicates(&brokerStatus, metadata)
 	}
