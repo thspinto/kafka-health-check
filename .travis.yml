@@ -10,6 +10,5 @@ go:
 
 sudo: false
 
-# script:
-#   - make test-no-race
-#   - make compatibility
+script:
+  - go build -v
