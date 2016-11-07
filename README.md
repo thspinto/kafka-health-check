@@ -11,8 +11,7 @@ Health checker for Kafka brokers and clusters that operates by checking whether:
 * the metadata of the cluster and the ZooKeeper metadata are consistent with each other.
 
 ## Status
-[![Build Status](https://travis-ci.org/andreas-schroeder/kafka-health-check.svg?branch=master)](https://travis-ci.org/andreas-schroeder/kafka-health-check)
-
+[![Build Status](https://travis-ci.org/ustream/kafka-health-check.svg?branch=master)](https://travis-ci.org/ustream/kafka-health-check)
 ## Usage
 
 ```
