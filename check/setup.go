@@ -113,6 +113,8 @@ func (check *HealthCheck) findPartitionID(topicName string, forHealthCheck bool,
 	if ok {
 		return 0, fmt.Errorf(`Unable to find broker's parition in topic "%s" in metadata`, topicName)
 	}
+
+	*createIfMissing = true
 	return 0, fmt.Errorf(`Unable to find broker's topic "%s" in metadata`, topicName)
 }
 
