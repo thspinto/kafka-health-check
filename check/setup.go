@@ -178,14 +178,14 @@ func (check *HealthCheck) createTopic(name string, forHealthCheck bool) (err err
 			`"cleanup.policy":"delete","compression.type":"uncompressed"}}`
 		log.Infof(`creating topic "%s" configuration node`, name)
 
-		if err = createZkNode(zkConn, topicPath, topicConfig, forHealthCheck); err != nil {
+		if err = createZkNode(zkConn, topicPath, topicConfig, false); err != nil {
 			return
 		}
 
 		partitionAssignment := fmt.Sprintf(`{"version":1,"partitions":{"0":[%d]}}`, brokerID)
 		log.Infof(`creating topic "%s" partition assignment node`, name)
 
-		if err = createZkNode(zkConn, chroot+"/brokers/topics/"+name, partitionAssignment, forHealthCheck); err != nil {
+		if err = createZkNode(zkConn, chroot+"/brokers/topics/"+name, partitionAssignment, false); err != nil {
 			return
 		}
 	}
