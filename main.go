@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ustream/kafka-health-check/check"
+	"github.com/thspinto/kafka-health-check/check"
 )
 
 func main() {

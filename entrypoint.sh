@@ -1,6 +1,6 @@
 #!/bin/bash
 
-run="./kafka-health-check "
+run="kafka-health-check "
 
 for VAR in `env`
 do
@@ -19,5 +19,5 @@ if [[ -n "$KAFKA_BROKER_ID" ]]; then
     run+="-broker-id $KAFKA_BROKER_ID "
 fi
 
-
 echo $run
+eval $run
